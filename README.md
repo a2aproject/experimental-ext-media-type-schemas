@@ -6,8 +6,14 @@ This repository contains the specification for the **Media Type Schemas Extensio
 
 ## Purpose
 
-A media type alone does not describe the shape of a structured payload. This data-only extension lets an agent advertise, on its Agent Card, a schema (inline or by URL) for each structured media type it uses, and declare per skill a canonical media type for invoking that skill with structured input. A Part in that media type is a hint that the client wants the agent to use the skill. How the agent executes the request is not exposed to the client.
+A media type alone does not describe the shape of a structured payload. This data-only extension lets an agent advertise, on its Agent Card, a schema (inline or by URL) for each structured media type it uses. Clients use the schemas to construct conforming input and to interpret typed output.
 
 ## Specification
 
 The full v1 specification can be found [here](./v1/spec.md).
+
+## Skill Invocation Hints
+
+The **Skill Invocation Hints Extension**, identified by `https://a2a-protocol.org/extensions/skill-invocation-hints/v1`, builds on this extension. It lets an agent declare per skill a canonical media type for invoking that skill with structured input. A Part in that media type is a hint that the client wants the agent to use the skill. How the agent executes the request is not exposed to the client. An agent that declares it MUST also declare the Media Type Schemas extension.
+
+The v1 specification can be found [here](./skill-invocation-hints/v1/spec.md).
