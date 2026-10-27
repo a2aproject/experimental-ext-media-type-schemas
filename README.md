@@ -6,7 +6,7 @@ This repository contains the specification for the **Media Type Schemas Extensio
 
 ## Purpose
 
-A media type alone does not describe the shape of a structured payload. This data-only extension lets an agent advertise, on its Agent Card, a schema (inline or by URL) for each structured media type it uses, and declare per skill a canonical media type for invoking that skill with structured input. A Part in that media type is a hint that the client wants the agent to use the skill. How the agent executes the request is not exposed to the client.
+A media type alone does not describe the shape of a structured payload. This data-only extension lets an agent advertise, on its Agent Card, a schema (inline or by URL) for each structured media type it uses. Clients use the schemas to construct conforming input and to interpret typed output.
 
 ## Specification
 

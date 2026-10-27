@@ -13,23 +13,14 @@ describe the shape of a structured payload, and a vendor media type such as
 `application/vnd.example.order.v1+json` has no defined place where its schema can be found.
 
 This extension defines how an agent advertises, in its Agent Card, a schema for each structured
-media type it uses. It also lets an agent declare, per skill, a canonical media type for invoking
-that skill with structured input. A Part carrying that media type is a hint that the client wants
-the agent to use the skill. When a structured type carrying all relevant information is provided,
-agent harnesses MAY be able to apply optimizations internally. Whether they do is not exposed to the
-client.
-
-The per-skill canonical modes are a staging ground. They let implementations evaluate whether the
-core specification should define a preferred mode for skill invocation.
+media type it uses. Clients can use the schemas to construct conforming input and to interpret typed
+output. When a structured type carrying all relevant information is provided, agent harnesses MAY
+be able to apply optimizations internally. Whether they do is not exposed to the client.
 
 ### 1.1 Definitions
 
 - Schema entry: an object in `params.schemas` (Section 3.1).
-- Skill entry: an object in `params.skills` (Section 3.1).
 - Typed Part: a `Part` whose `mediaType` matches a schema entry (Section 4.2).
-- Canonical input mode: the media type a skill entry declares for invoking that skill with
-  structured input.
-- Skill hint: the signal carried by a typed Part whose media type is a skill's canonical input mode.
 
 ## 2. Extension URI
 
@@ -70,13 +61,6 @@ An agent that publishes media type schemas MUST declare this extension in
                 }
               }
             }
-          ],
-          "skills": [
-            {
-              "skillId": "wine-quote",
-              "canonicalInputMode": "application/vnd.example.wine-rfq.v1+json",
-              "canonicalOutputMode": "application/vnd.example.wine-quote.v1+json"
-            }
           ]
         }
       }
@@ -102,7 +86,6 @@ An agent that publishes media type schemas MUST declare this extension in
 | Field     | Type                  | Required | Description |
 | :-------- | :-------------------- | :------- | :---------- |
 | `schemas` | array of schema entry | Yes      | One schema per structured media type. |
-| `skills`  | array of skill entry  | No       | Canonical media types for invoking skills with structured input. |
 
 Schema entry:
 
@@ -115,14 +98,6 @@ Schema entry:
 | `digest`      | string            | No          | Integrity metadata for the bytes retrieved from `url`, in Subresource Integrity format [Subresource Integrity](https://www.w3.org/TR/SRI/). |
 | `description` | string            | No          | A human-readable description. |
 
-Skill entry:
-
-| Field                 | Type   | Required | Description |
-| :-------------------- | :----- | :------- | :---------- |
-| `skillId`             | string | Yes      | The `id` of an `AgentSkill` in the same card. |
-| `canonicalInputMode`  | string | Yes      | The media type a client uses to invoke this skill with structured input. |
-| `canonicalOutputMode` | string | No       | The media type the skill returns for such a request. |
-
 Rules:
 
 1. Each schema entry MUST contain exactly one of `schema` or `url`. Both forms are fully supported.
@@ -131,17 +106,12 @@ Rules:
    referenced document.
 2. Agents MUST NOT publish two schema entries that match the same media type.
 3. A schema entry describes shape only. Whether a media type is used for input or output is
-   determined by where it appears: `defaultInputModes`, `defaultOutputModes`, skill `inputModes`
-   and `outputModes`, and the canonical modes.
+   determined by where it appears: `defaultInputModes`, `defaultOutputModes`, and skill
+   `inputModes` and `outputModes`.
 4. Agents SHOULD NOT publish schemas for generic media types such as `application/json`. Agents
    SHOULD use a specific media type, typically in the vendor tree with a `+json` suffix [RFC 6839](https://www.rfc-editor.org/rfc/rfc6839),
    and SHOULD put a major version in the subtype.
-5. Each `skillId` MUST appear in at most one skill entry and MUST match a skill in the card.
-6. `canonicalInputMode` MUST appear in that skill's `inputModes` and MUST have a schema entry. Two
-   skill entries MUST NOT declare the same `canonicalInputMode`.
-7. If present, `canonicalOutputMode` MUST appear in that skill's `outputModes` and MUST have a
-   schema entry.
-8. Agents SHOULD set `required` to `false`.
+5. Agents SHOULD set `required` to `false`.
 
 When a `url` carries a fragment, clients SHOULD resolve it as a JSON Schema 2020-12 validator
 resolves a `$ref` to the same URI: the whole document is the schema resource, and the fragment
@@ -173,24 +143,10 @@ same value. A Part without `mediaType` matches nothing.
 A client that wants typed output lists the output media type in `acceptedOutputModes`. An agent
 returning typed output SHOULD place it in an `Artifact` Part with that `mediaType`.
 
-Clients SHOULD NOT put the canonical input modes of different skills in one Message. Agents MAY
-treat such a Message as carrying no skill hint.
-
 ### 4.3 Server Behavior
 
-A typed Part whose media type matches a skill's `canonicalInputMode` is a skill hint for that skill.
-If the request also selects a skill another way and the two conflict, the agent SHOULD prefer the
-explicit selection.
-
-- The agent MAY use the hint to select the skill and route the payload to an internal tool or
-  workflow, and MAY instead handle the request through its general logic.
-- Either way, the agent MUST return standard A2A responses and MUST apply the same authentication
-  and authorization as for any other request to that skill. A hint MUST NOT be treated as a grant
-  of permission.
-- This extension defines no signal of how a request was executed. Clients MUST NOT depend on a
-  particular execution path.
-- An agent MUST validate a typed Part, or perform an equivalent check, before routing it directly
-  to a tool or workflow. A non-conforming Part MUST NOT be treated as conforming.
+- An agent MUST validate a typed Part, or perform an equivalent check, before relying on its
+  conformance. A non-conforming Part MUST NOT be treated as conforming.
 - An agent that labels an output Part with a schema-described media type MUST ensure the content
   conforms. If it cannot, it MUST NOT use that label.
 
@@ -204,7 +160,7 @@ Errors reuse core A2A errors:
 
 ### 4.4 Example
 
-The client sends an RFQ in the canonical input mode of `wine-quote`, activating the extension.
+The client sends a typed RFQ, activating the extension.
 
 ```http
 POST /a2a HTTP/1.1
@@ -234,8 +190,7 @@ A2A-Extensions: https://a2a-protocol.org/extensions/media-type-schemas/v1
 }
 ```
 
-The agent authorizes the caller for `wine-quote`, validates the Part, and handles it by whatever
-path it chooses. The response has the same form either way.
+The agent validates the Part and returns a typed quote.
 
 ```http
 HTTP/1.1 200 OK
@@ -277,5 +232,5 @@ A2A-Extensions: https://a2a-protocol.org/extensions/media-type-schemas/v1
   resolution and redirects), SHOULD limit redirects, size, and time, and SHOULD NOT follow remote
   `$ref` values by default. When `digest` is present, clients MUST verify it and MUST NOT use a
   schema that fails.
-- A skill hint does not grant authorization (Section 4.3). A denied
-  request MUST NOT be retried internally through a different path with the same effect.
+- A typed Part does not change authorization. Agents MUST apply the same authentication and
+  authorization as for any other request.
